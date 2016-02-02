@@ -1,5 +1,5 @@
 //Advanced Analytics with Spark
-
+/*
 mkdir linkage
 cd linkage
 
@@ -13,7 +13,7 @@ hdfs dfs -put block_*.csv linkage/
 hdfs dfs -ls linkage/
 
 $ spark-shell
-
+*/
 val rawblocks = sc.textFile("linkage")
 
 rawblocks.first

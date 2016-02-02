@@ -175,6 +175,13 @@ md.scores.map(d => NAStatCounter(d))
 })
 nasRDD.first
 
+/*
+getting  
+java.lang.NullPointerException
+here !!! ???
+with CDH 5.4 Spark 1.3.0
+*/
+
 val nas1 = Array(1.0,Double.NaN).map(d => NAStatCounter(d))
 val nas2 = Array(Double.NaN,2.0).map(d => NAStatCounter(d))
 val merged = nas1.zip(nas2).map(p => p._1.merge(p._2))

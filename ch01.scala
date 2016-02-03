@@ -49,12 +49,12 @@ def toDouble (s : String ) = {
 rawscores.map(toDouble)
 
 def parse ( line : String ) = {
-val pieces = line.split(',')
-val id1 = pieces(0).toInt
-val id2 = pieces(1).toInt
-val scores = pieces.slice(2,11).map(toDouble)
-val matched = pieces(11).toBoolean
-(id1,id2,scores,matched)
+  val pieces = line.split(',')
+  val id1 = pieces(0).toInt
+  val id2 = pieces(1).toInt
+  val scores = pieces.slice(2,11).map(x => toDouble(x))
+  val matched = pieces(11).toBoolean
+  (id1,id2,scores,matched)
 }
 val tup = parse(line)
 
@@ -83,7 +83,7 @@ val mds = head.filter(!isHeader(_)).map(parse(_))
 
 val parsed = noheader.map(line => parse(line))
 
-parsed.cache
+//parsed.cache
 
 val grouped = mds.groupBy(_.matched)
 
@@ -98,13 +98,14 @@ matchCountsSeq.sortBy(_._2).foreach(println)
 
 parsed.map(_.scores(0)).stats()
 
-import java.lang.Double.isNaN
-parsed.map(_.scores(0)).filter(!isNaN(_)).stats()
+//import java.lang.Double.isNaN
+parsed.map(_.scores(0)).filter(!_.isNaN).stats()
 
-val stats = (0 until 9).map(i => {
+// !!! using stats as value name causes java.lang.NullPointerException for nasRDD !!!
+val stats0to9 = (0 until 9).map(i => {
 parsed.map(_.scores(i)).filter(!_.isNaN).stats()
 })
-stats.foreach(println)
+stats0to9.foreach(println)
 
 //:paste
 
@@ -154,10 +155,10 @@ nas2.merge(nas1)
 val arr = Array(1.0, Double.NaN, 17.29)
 val nas = arr.map(NAStatCounterFactory(_))
 
-val nasRDD = parsed.map(md => {
+val nasRDD0 = parsed.map(md => {
 md.scores//.map(d => NAStatCounterFactory(d))
 })
-nasRDD.first
+nasRDD0.first
 
 val f = parsed.first
 f.scores.map(d => NAStatCounterFactory(d))
@@ -171,16 +172,10 @@ md.scores.map(d => 1)//sc.parallelize(Array(d)).stats)
 nasRDD1.first
 
 val nasRDD = parsed.map(md => {
+//md.scores.map(d => new NAStatCounter(d))
 md.scores.map(d => NAStatCounterFactory(d))
 })
 nasRDD.first
-
-/*
-getting  
-java.lang.NullPointerException
-here !!! ???
-with CDH 5.4 Spark 1.3.0
-*/
 
 val nas1 = Array(1.0,Double.NaN).map(d => NAStatCounterFactory(d))
 val nas2 = Array(Double.NaN,2.0).map(d => NAStatCounterFactory(d))
@@ -199,5 +194,5 @@ n1.zip(n2).map { case (a, b) => a.merge(b) }
 })
 reduced.foreach(println)
 
-import org.apache.spark.rdd.RDD
+//import org.apache.spark.rdd.RDD
 

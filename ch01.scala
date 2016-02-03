@@ -69,7 +69,7 @@ def parse ( line : String ) = {
 val pieces = line.split(',')
 val id1 = pieces(0).toInt
 val id2 = pieces(1).toInt
-val scores = pieces.slice(2,11).map(toDouble(_))
+val scores = pieces.slice(2,11).map(x => toDouble(x))
 val matched = pieces(11).toBoolean
 MatchData(id1,id2,scores,matched)
 }
@@ -110,68 +110,68 @@ stats.foreach(println)
 
 //vi NAStatCounter.scala
  
-import org.apache.spark.rdd.RDD
-
 import org.apache.spark.util.StatCounter
 
-class NAStatCounter extends Serializable {
-val stats: StatCounter = new StatCounter()
-var missing: Long = 0
-def add(x: Double): NAStatCounter = {
-if (x.isNaN) {
-missing += 1
-} else {
-stats.merge(x)
-}
-this
-}
-def merge(other: NAStatCounter): NAStatCounter = {
-stats.merge(other.stats)
-missing += other.missing
-this
-}
-override def toString: String = {
-"stats: " + stats.toString + " NaN: " + missing
-}
+class NAStatCounter (d : Double) extends Serializable {
+  val stats: StatCounter = new StatCounter()
+  var missing: Long = 0
+  def add(x: Double): NAStatCounter = {
+    if (x.isNaN) {
+      missing += 1
+    } else {
+      stats.merge(x)
+    }
+    this
+  }
+  def merge(other: NAStatCounter): NAStatCounter = {
+    stats.merge(other.stats)
+    missing += other.missing
+    this
+  }
+  override def toString: String = {
+    "stats: " + stats.toString + " NaN: " + missing
+  }
+  //constructor
+  add(d)
 }
 
-object NAStatCounter extends Serializable {
-def apply(x: Double) = new NAStatCounter().add(x)
+object NAStatCounterFactory extends Serializable {
+  def apply(d: Double) = new NAStatCounter(d)
 }
 
 //Ctrl+D
 
 //:load NAStatCounter.scala
 
-val nas1 = NAStatCounter(10.0)
+val nas1 = new NAStatCounter(10.0)
 nas1.add(2.1)
 nas1.add(1.2)
 nas1.add(Double.NaN)
-val nas2 = NAStatCounter(Double.NaN)
+val nas2 = NAStatCounterFactory(Double.NaN)
 nas2.add(1.0)
 nas2.merge(nas1)
 
 val arr = Array(1.0, Double.NaN, 17.29)
-val nas = arr.map(NAStatCounter(_))
+val nas = arr.map(NAStatCounterFactory(_))
 
 val nasRDD = parsed.map(md => {
-md.scores//.map(d => NAStatCounter(d))
+md.scores//.map(d => NAStatCounterFactory(d))
 })
 nasRDD.first
 
 val f = parsed.first
-f.scores.map(d =>NAStatCounter(d))
+f.scores.map(d => NAStatCounterFactory(d))
 
 val t10 = parsed.take(10)
-t10.map( x => x.cores.map(d =>NAStatCounter(d)))
+t10.map( x => x.scores.map(d => NAStatCounterFactory(d)))
 
-val nasRDD = parsed.map(md => {
+val nasRDD1 = parsed.map(md => {
 md.scores.map(d => 1)//sc.parallelize(Array(d)).stats)
 })
-nasRDD.first
+nasRDD1.first
 
 val nasRDD = parsed.map(md => {
-md.scores.map(d => NAStatCounter(d))
+md.scores.map(d => NAStatCounterFactory(d))
 })
 nasRDD.first
 
@@ -182,8 +182,8 @@ here !!! ???
 with CDH 5.4 Spark 1.3.0
 */
 
-val nas1 = Array(1.0,Double.NaN).map(d => NAStatCounter(d))
-val nas2 = Array(Double.NaN,2.0).map(d => NAStatCounter(d))
+val nas1 = Array(1.0,Double.NaN).map(d => NAStatCounterFactory(d))
+val nas2 = Array(Double.NaN,2.0).map(d => NAStatCounterFactory(d))
 val merged = nas1.zip(nas2).map(p => p._1.merge(p._2))
 
 val merged = nas1.zip(nas2).map{ case (a,b) => a.merge(b)}
@@ -198,3 +198,6 @@ val reduced = nasRDD.reduce((n1, n2) => {
 n1.zip(n2).map { case (a, b) => a.merge(b) }
 })
 reduced.foreach(println)
+
+import org.apache.spark.rdd.RDD
+
